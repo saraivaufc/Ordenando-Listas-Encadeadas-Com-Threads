@@ -83,7 +83,7 @@ typedef struct{
 }Objeto_Thread;
 
 sem_t mutex;
-int counter; /* shared variable */
+int counter;
 
 void * carrega_lista(void * obj){
 	printf("\nThread criada...\n");
@@ -126,35 +126,57 @@ void * insertionSort_list(void *arg){
 	return arg;
 }
 
-int menor_das_listas(Lista *Listas){
+int menor_das_listas(Lista *l, FILE * arq){
 	int menor;
-	int t;
-	node ** listas=(node **) malloc(quant_nucleos * sizeof (node));
-	for(int i=0;i<quant_nucleos;i++){
-		listas[i]=Listas->primeiro;
+	//se eu tiver apenas uma lista
+	if(quant_nucleos == 1){
+		for(node * aux = l->primeiro; aux != NULL; aux=aux->prox){
+			menor=aux->valor;
+			printf("[%d]",menor);
+			fwrite (&menor, sizeof(menor),1, arq);
+		}
+		return -1;
 	}
-
-	for(int i=0;i<quant_nucleos;i++){
-		menor=listas[0]->valor;
-		t=0;
-		for(int k=1;k<quant_nucleos;k++){
-			if(listas[k]->valor < menor){
-				menor=listas[k]->valor;
-				t=k;
+	
+	//caso eu tenha mais de uma lista eu faço o menor ser o primeiro valor da primeira lista
+	int temp=0;
+	if(l[0].primeiro != NULL)
+		menor=l[0].primeiro->valor;
+	
+	//crio um laço pra percorrer cada vetor de lista
+	for(int i=1 ; i<quant_nucleos ; i++){
+		//para toda lista não vazia faça
+		if(l[i].primeiro != NULL){
+			//se o menor valor dessa lista foor menor que menor
+			if(l[i].primeiro->valor < menor){
+				//atualizo o temp e o menor
+				temp=i;
+				menor=l[i].primeiro->valor;
 			}
 		}
 	}
-	node * n=listas[t];
-	listas[t]=listas[t]->prox;
-	free(n);
-	sleep(100);
+	//eu sempre removo o menor de sua lista
+	l[temp].primeiro=l[temp].primeiro->prox;
+	
+	//para todos os vetores faça
+	for(int i=0 ; i<quant_nucleos ; i++){
+		//se alguma lista estiiver vazia então
+		if(l[i].primeiro == NULL && i<quant_nucleos-1){
+			//tal lista recebe a lista da ultima possição e elmina a ultima posição
+			l[i].primeiro=l[quant_nucleos-1].primeiro;
+			quant_nucleos--;
+		}
+	}
+	
 	return menor; 
 }
 
 
+
 void ordena_lista(Lista * L, char tamanho[]){
 	int pedaco=(int)L->tam/quant_nucleos;
-	Lista * minhas_t=(Lista *) malloc(quant_nucleos * sizeof(Lista));
+	Lista minhas_t[quant_nucleos];
+	
 	minhas_t[0].primeiro=L->primeiro;
 	for(int i=1;i<quant_nucleos;i++){
 		
@@ -181,8 +203,8 @@ void ordena_lista(Lista * L, char tamanho[]){
 	}
 	for(int i=0;i<quant_nucleos;i++){
 		printf("\n");
-		//mostra_lista(&minhas_t[i]);
-		printf("\n");
+		mostra_lista(&minhas_t[i]);
+		printf("\n\n");
 	}
 
 
@@ -194,15 +216,15 @@ void ordena_lista(Lista * L, char tamanho[]){
 		return;
 	}
 	
-	for(int k=0;k<( ((int)atoi(tamanho)*size_file)/size_int );k++)
+	for( ; ; )
 	{
-		int menor=menor_das_listas(minhas_t);
+		int menor=menor_das_listas(minhas_t,arq);
+		if(menor == -1)
+			return;
+		printf("[%d]",menor);
 		fwrite (&menor, sizeof(menor),1, arq);
 	} 
 	fclose(arq);
-
-
-	
 }
 
 
@@ -216,7 +238,9 @@ int main(){
 	//Após isso eu terei uma variavel Global <quant_nucleo> referênte a quantidade de nucleos te processador
 	printf("Você tem %d nucleos de processamento...\n",quant_nucleos);
 	Lista * L=cria_lista();
+	
 	char tamanho_dos_arquivos[]="1";
+	
 	cria_arquivos(L,tamanho_dos_arquivos);
 	//depois daqui estaram todos os arquivos criados
 
@@ -242,7 +266,7 @@ int main(){
 		pthread_join(threads[i], NULL);
 	}
 	printf("Lista Completa:");
-	sleep(1);
+	//sleep(1); //gambi aqui, retirar se não der certo
 	//mostra_lista(L);
 	ordena_lista(L,tamanho_dos_arquivos);
 	return 0;
