@@ -1,19 +1,43 @@
+//BIBLIOTECAS NECESSARIAS
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <time.h>
 #include "lista.h"
 #include <semaphore.h>
 
-#define quant_arquivos 10
-#define size_int 4
+//MEUS DEFINES
+#define quant_arquivos 10  //a quantidade de arquivos binario que eu desejar
+#define size_int 4   // o tamanho em Bytes dos arquivos que eu vou trabalhar, se fossem caracteres seria 1
+#define size_file 1024 //tamanho de Bytes que temos em 1 Kb
 
-#define size_file 1024
+//MINHAS ESTRUTURAS
+typedef struct{
+	Lista * L;//lista onde armazenará os valores
+	char * arquivo;//o path do arquivo que eu vou jogar na lista
+	int tamanho;//quantidade de KB do arquivo
+}Objeto_Thread;
 
-int quant_nucleos;
+//MINHAS VARIAVEIS GLOBAIS
+sem_t mutex; //crio uma variavel Mutex da semaphore.h
+int quant_nucleos; //essa variavel armazenará a quantidade de nucleos da minha CPU
+int counter; //
+unsigned long long tam_output=0;
 
+//MINHA FUNÇÔES
+void retorna_nucleos_unix(); //essa função armazena em <quant_nucleos> a quantidade de nucleo da CPU onde o SO seja baseado no Unix 
+void retorna_nucleos_dos(); //essa função armazena em <quant_nucleos> a quantidade de nucleo da CPU onde o SO seja baseado no MS-DOS
+char atoi_reverse(int n); //essa  função recebe um numero inteiro e retorna uma string referente aquele numero
+void cria_arquivos(Lista *L,int tamanho); //cria <quant_arquivos> binarios com inteiros aleatorios
+void * carrega_lista(void * obj); //essa função recebe de todos os arquivos os valores e inserem na lista, usando threads
+void * insertionSort_list(void *arg); //ordena uma lista encadeada usando o algoritmo Insertio-Sort
+int menor_das_listas(Lista *l, FILE * arq, FILE * saida); //recebe um vetor de listas ordenadas e remove e retorna o menor valor delas
+void ordena_lista(Lista * L, int tamanho); //essa função gerencia as threads na hora da ordenação das listas
+void cria_saida(Lista * minhas_t); //essa função faz a magia rsrsr, ela entrelaça N listas e joga automaticamente em output.bin 
 
+//FUNÇÔES IMPLEMENTADAS
 void retorna_nucleos_unix(){
 	system("cat /proc/cpuinfo | grep processor | wc -l  >> nucleos.txt");
 	FILE * nucleos;
@@ -22,6 +46,7 @@ void retorna_nucleos_unix(){
 	fclose(nucleos);
 	system("rm nucleos.txt");
 }
+
 void retorna_nucleos_dos(){
 
 }
@@ -50,7 +75,7 @@ char atoi_reverse(int n){
 	return 'x';
 }
 
-void cria_arquivos(Lista *L,char tamanho[]){
+void cria_arquivos(Lista *L,int tamanho){
 	char nome_arq[6];
 	nome_arq[1]='.';
 	nome_arq[2]='b';
@@ -58,7 +83,6 @@ void cria_arquivos(Lista *L,char tamanho[]){
 	nome_arq[4]='n';
 	nome_arq[5]='\0';
 
-	
 	srand(time(NULL));
 	for(int i=0 ; i < quant_arquivos ; i++){
 		nome_arq[0]=atoi_reverse(i);
@@ -67,33 +91,25 @@ void cria_arquivos(Lista *L,char tamanho[]){
 			printf("Error ao abrir arquivo..\n");
 			return;
 		}
-		for(int k=0;k<((int)atoi(tamanho)*size_file)/size_int;k++)
+		for(int k=0;k<(tamanho*size_file)/size_int;k++)
 		{
-			int aleatorio=rand()%10;
+			int aleatorio=rand();
 			fwrite (&aleatorio, sizeof(aleatorio),1, arq);
 		}
 		fclose(arq);
 	}
 }
 
-typedef struct{
-	Lista * L;//lista onde armazenará os valores
-	char * arquivo;//o path do arquivo que eu vou jogar na lista
-	char * tamanho;//quantidade de mb do arquivo
-}Objeto_Thread;
-
-sem_t mutex;
-int counter;
-
+int cont=0;
 void * carrega_lista(void * obj){
-	printf("\nThread criada...\n");
+	printf("\t%dª Thread criada...\n",++cont);
 	Objeto_Thread * Objeto=(Objeto_Thread *) obj;
 	FILE * arq=fopen(Objeto->arquivo, "rb");
 	if(arq == NULL){
 		printf("Error ao abrir o arquivo...\n");
 		return NULL;
 	}
-	for(int k=0;k<((int)atoi(Objeto->tamanho) *size_file)/size_int;k++)
+	for(int k=0;k<(Objeto->tamanho*size_file)/size_int;k++)
 	{
 		int valor;
 		fread(&valor, sizeof(valor),1, arq);
@@ -126,13 +142,15 @@ void * insertionSort_list(void *arg){
 	return arg;
 }
 
-int menor_das_listas(Lista *l, FILE * arq){
+int menor_das_listas(Lista *l, FILE * arq, FILE * saida){
 	int menor;
 	//se eu tiver apenas uma lista
 	if(quant_nucleos == 1){
 		for(node * aux = l->primeiro; aux != NULL; aux=aux->prox){
 			menor=aux->valor;
-			printf("[%d]",menor);
+			if(saida != NULL)
+			fprintf(saida,"[%d]",menor);
+			tam_output++;
 			fwrite (&menor, sizeof(menor),1, arq);
 		}
 		return -1;
@@ -147,7 +165,7 @@ int menor_das_listas(Lista *l, FILE * arq){
 	for(int i=1 ; i<quant_nucleos ; i++){
 		//para toda lista não vazia faça
 		if(l[i].primeiro != NULL){
-			//se o menor valor dessa lista foor menor que menor
+			//se o menor valor dessa lista for menor que menor
 			if(l[i].primeiro->valor < menor){
 				//atualizo o temp e o menor
 				temp=i;
@@ -156,7 +174,8 @@ int menor_das_listas(Lista *l, FILE * arq){
 		}
 	}
 	//eu sempre removo o menor de sua lista
-	l[temp].primeiro=l[temp].primeiro->prox;
+	if(l[temp].primeiro != NULL)
+		l[temp].primeiro=l[temp].primeiro->prox;
 	
 	//para todos os vetores faça
 	for(int i=0 ; i<quant_nucleos ; i++){
@@ -167,13 +186,12 @@ int menor_das_listas(Lista *l, FILE * arq){
 			quant_nucleos--;
 		}
 	}
-	
 	return menor; 
 }
 
 
 
-void ordena_lista(Lista * L, char tamanho[]){
+void ordena_lista(Lista * L, int tamanho){
 	int pedaco=(int)L->tam/quant_nucleos;
 	Lista minhas_t[quant_nucleos];
 	
@@ -184,46 +202,60 @@ void ordena_lista(Lista * L, char tamanho[]){
 		for(int k=0;k<pedaco;k++){
 			aux=aux->prox;
 		}
-		//peraaaaaa ai
 		node * temp=aux->prox;
 		temp->ant=NULL;
 		aux->prox=NULL;
 		L->primeiro=temp;
 		minhas_t[i].primeiro=L->primeiro;
 	}
-	printf("\n");
+	printf("Agora criar as threads para ordenar a lista...\n");
 	pthread_t minhas_threads[quant_nucleos];
 	for(int i=0;i<quant_nucleos;i++){
 		pthread_create(&(minhas_threads[i]), NULL,insertionSort_list, (void *)&minhas_t[i]);
-		printf("%dª Thread criada...\n",i+1);
-		
+		printf("\t%dª Thread criada...\n",i+1);
+		sleep(1);
 	}
 	for(int i=0; i<quant_nucleos; i++) {
 		pthread_join(minhas_threads[i], NULL);
 	}
+	
+	//comentei isso para evitar imprimir as lists na tela
+	/*
 	for(int i=0;i<quant_nucleos;i++){
 		printf("\n");
 		mostra_lista(&minhas_t[i]);
 		printf("\n\n");
 	}
+	*/
 
 
-//criando o arquivo de saida
+	//criando o arquivo de saida
+	cria_saida(minhas_t);
+}
 
+void cria_saida(Lista * minhas_t){
 	FILE * arq=fopen("output.bin", "wb");
 	if(arq == NULL){
 		printf("Error ao abrir arquivo..\n");
 		return;
 	}
 	
+	//altere as opções caso queria um .TXT do OUTPUT.BIN
+	//FILE * saida=fopen("saida.txt","w+");
+	FILE * saida=NULL;
+	
+	
 	for( ; ; )
 	{
-		int menor=menor_das_listas(minhas_t,arq);
+		int menor=menor_das_listas(minhas_t,arq,saida);
 		if(menor == -1)
 			return;
-		printf("[%d]",menor);
+		if(saida != NULL)
+			fprintf(saida,"[%d]",menor);
+		tam_output++;
 		fwrite (&menor, sizeof(menor),1, arq);
 	} 
+	fclose(saida);
 	fclose(arq);
 }
 
@@ -237,16 +269,22 @@ int main(){
 	}
 	//Após isso eu terei uma variavel Global <quant_nucleo> referênte a quantidade de nucleos te processador
 	printf("Você tem %d nucleos de processamento...\n",quant_nucleos);
-	Lista * L=cria_lista();
 	
-	char tamanho_dos_arquivos[]="1";
+	Lista * L=cria_lista();
+	printf("Digite o tamanho do seu arquivo em KB:");
+	int tamanho_dos_arquivos;
+	scanf("%d",&tamanho_dos_arquivos);
+	
+	time_t inicio, fim;
+	inicio=time(NULL);
 	
 	cria_arquivos(L,tamanho_dos_arquivos);
 	//depois daqui estaram todos os arquivos criados
 
 	pthread_t threads[10];
 
-	sem_init(&mutex, 0, 1);  
+	//inicializo meu Mutex
+	sem_init(&mutex, 0, 1);
 	
 	char nome_arq[6];
 	nome_arq[1]='.';
@@ -254,20 +292,31 @@ int main(){
 	nome_arq[3]='i';
 	nome_arq[4]='n';
 	nome_arq[5]='\0';
+	
+	printf("Criar as Threads para receber os arquivos...\n");
 	for(int i=0;i<10;i++){
 		nome_arq[0]=atoi_reverse(i);
+		
+		//Para usar todas as minha variaveis na thread, eu preciso compactala em apenas uma Struct, assim posso passar um *void
 		Objeto_Thread * obj=(Objeto_Thread *)malloc(sizeof(Objeto_Thread));
 		obj->L=L;
 		obj->arquivo=nome_arq;
 		obj->tamanho=tamanho_dos_arquivos;
+		
+		
 		pthread_create(&(threads[i]), NULL,carrega_lista, (void *)obj);
 	}
 	for(int i=0; i<10; i++) {
 		pthread_join(threads[i], NULL);
 	}
-	printf("Lista Completa:");
-	//sleep(1); //gambi aqui, retirar se não der certo
-	//mostra_lista(L);
 	ordena_lista(L,tamanho_dos_arquivos);
+	fim=time(NULL);
+	printf("O tamanho da sua lista é: %lld inteiros",tam_output);
+	
+	int tempo=(difftime(inicio,fim) * (-1) );
+	FILE * log=fopen("log.txt","w+");
+	fprintf(log,"Segundos: %d ou Minutos: %d\n",tempo,tempo/60);
+	printf("\nSegundos: %d ou Minutos: %d\n",tempo,tempo/60);
+	fclose(log);
 	return 0;
 }
