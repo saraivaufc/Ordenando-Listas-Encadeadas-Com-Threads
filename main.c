@@ -76,16 +76,21 @@ char atoi_reverse(int n){
 }
 
 void cria_arquivos(Lista *L,int tamanho){
-	char nome_arq[6];
-	nome_arq[1]='.';
-	nome_arq[2]='b';
-	nome_arq[3]='i';
-	nome_arq[4]='n';
-	nome_arq[5]='\0';
+	//arquivo0.bin
+	char nome_arq[12];
+	char arqv[]="arquivo";
+	for(int i=0;i<7;i++){
+		nome_arq[i]=arqv[i];
+	}
+	nome_arq[8]='.';
+	nome_arq[9]='b';
+	nome_arq[10]='i';
+	nome_arq[11]='n';
+	nome_arq[12]='\0';
 
 	srand(time(NULL));
 	for(int i=0 ; i < quant_arquivos ; i++){
-		nome_arq[0]=atoi_reverse(i);
+		nome_arq[7]=atoi_reverse(i);
 		FILE * arq=fopen(nome_arq, "wb");
 		if(arq == NULL){
 			printf("Error ao abrir arquivo..\n");
@@ -286,16 +291,20 @@ int main(){
 	//inicializo meu Mutex
 	sem_init(&mutex, 0, 1);
 	
-	char nome_arq[6];
-	nome_arq[1]='.';
-	nome_arq[2]='b';
-	nome_arq[3]='i';
-	nome_arq[4]='n';
-	nome_arq[5]='\0';
+	char nome_arq[12];
+	char arqv[]="arquivo";
+	for(int i=0;i<7;i++){
+		nome_arq[i]=arqv[i];
+	}
+	nome_arq[8]='.';
+	nome_arq[9]='b';
+	nome_arq[10]='i';
+	nome_arq[11]='n';
+	nome_arq[12]='\0';;
 	
 	printf("Criar as Threads para receber os arquivos...\n");
 	for(int i=0;i<10;i++){
-		nome_arq[0]=atoi_reverse(i);
+		nome_arq[7]=atoi_reverse(i);
 		
 		//Para usar todas as minha variaveis na thread, eu preciso compactala em apenas uma Struct, assim posso passar um *void
 		Objeto_Thread * obj=(Objeto_Thread *)malloc(sizeof(Objeto_Thread));
