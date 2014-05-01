@@ -1,2 +1,2 @@
 main: main.c lista.h
-	gcc -o main -Wall -std=c99 main.c lista.h  -lpthread
+	gcc main.c lista.h -ggdb -std=c99 -o main -lpthread
