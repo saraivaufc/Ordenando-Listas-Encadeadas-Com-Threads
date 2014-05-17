@@ -39,9 +39,7 @@ void cria_arquivos(int quant_arquivos, int  tamanho){
 }
 
 int main(){
-	int quant;
-	printf("Digite a quantidade de Arquivos:");
-	scanf("%d",&quant);
+	int quant=10;
 	int tam;
 	printf("Digite o tamanho em KB:");
 	scanf("%d",&tam);
