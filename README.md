@@ -1,2 +1,1 @@
-Ordenando-Listas-Encadeadas-Com-Threads
-=======================================
+Instruções: create_files.c  cria os arquivos binario, para isso dentro do diretorio dos arquivos voce tem de possuir outro diretorio chamado <arquivos>, que é onde seram colocado os arquivos binarios, depois de criar os arquivos, usa-se main.c para ordenar os arquivos e armazenar em um output.bin que ficara no novo diretorio que voce criou, use a Makefile para compilar.
