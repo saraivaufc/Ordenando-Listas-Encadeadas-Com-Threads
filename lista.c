@@ -7,6 +7,7 @@ Lista * Cria_Lista(){
 	L->primeiro = NULL;
 	L->ultimo = NULL;
 	L->n = 0;
+	L->n2 = 0;
 	return L;
 }
 
@@ -17,6 +18,7 @@ void Libera(Lista * L){
 		free(nodo); 
 	}
 	L->n = 0;
+	L->n2 = 0;
 }
 
 Nodo* Cria_Nodo(int x) {
@@ -29,7 +31,6 @@ Nodo* Cria_Nodo(int x) {
 
 void Insere(Lista *L, int x) {
 	Nodo * novo=Cria_Nodo(x);
-	
 	if(L->n == 0){
 		novo->ant=L->primeiro;
 		novo->prox=L->primeiro;
@@ -42,6 +43,24 @@ void Insere(Lista *L, int x) {
 		L->primeiro=novo;
 	}
 	L->n++;
+	return;
+}
+
+void Insere_rabo(Lista *L, int x){
+	Nodo * novo=Cria_Nodo(x);
+	
+	if(L->n == 0){
+		novo->ant=L->primeiro;
+		novo->prox=L->primeiro;
+		L->primeiro=novo;
+		L->ultimo=novo;
+	}else{
+		novo->prox=NULL;
+		novo->ant=L->ultimo;
+		L->ultimo->prox=novo;
+		L->ultimo=novo;
+	}
+	L->n2++;
 	return;
 }
 
