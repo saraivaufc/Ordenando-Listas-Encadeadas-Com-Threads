@@ -32,12 +32,17 @@ int main(){
 	Lista * L=Cria_Lista();
 	
 	carrega_lista(L);
-	
 	Lista * Vetor=particiona_lista(L);
 	
 	ordena_lista(Vetor);
-	
+
 	cria_saida(Vetor);
+
+	int es_ordenada=esta_ordenado();
+	if(es_ordenada == 0)
+		printf("Lista Totalmente Ordenada!!! :D \n");
+	else
+		printf("Lista Não-Ordenada Completamente!!! %d Valores Desordenados :( \n",es_ordenada);
 	
 	return 0;
 }
