@@ -16,4 +16,5 @@ Lista * particiona_lista(Lista *L);
 void ordena_lista(Lista *Vetor);
 void entrelaca_listas(Lista * Vetor);
 void swap(int *a, int *b);
+int esta_ordenado();
 #endif
